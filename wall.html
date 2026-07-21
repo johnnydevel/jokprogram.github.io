@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Community Wall | Just Calm Vibes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-dark: #070709; --text-main: #ffffff; --accent: #eab308;
+            --glass-bg: rgba(20, 20, 25, 0.9); --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+        
+        /* Navbar */
+        .nav-bar { position: fixed; top: 0; left: 0; width: 100%; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; z-index: 100; background: rgba(7,7,9,0.9); border-bottom: 1px solid var(--glass-border); }
+        .nav-brand { color: #fff; font-weight: 900; text-decoration: none; font-size: 1.2rem; }
+        .nav-links { display: flex; gap: 1rem; }
+        .nav-link { color: #fff; text-decoration: none; font-weight: 700; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); transition: 0.3s ease; }
+        .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* Controls */
+        .controls { margin: 7rem auto 2rem; padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; width: 90%; max-width: 500px; display: flex; flex-direction: column; gap: 1rem; }
+        .controls-header { font-weight: 800; font-size: 1.2rem; text-align: center; }
+        input[type="text"] { width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.5); color: #fff; font-size: 1rem; }
+        input[type="text"]:focus { outline: none; border-color: var(--accent); }
+        
+        .color-picker { display: flex; gap: 0.5rem; justify-content: center; }
+        .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
+        .color-btn.active { border-color: #fff; transform: scale(1.2); }
+        button.submit-btn { padding: 1rem; border: none; border-radius: 8px; background: var(--accent); color: #000; font-weight: 800; cursor: pointer; transition: 0.2s ease; }
+        button.submit-btn:hover { background: #facc15; }
+        button.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Expanding Korok Board */
+        .wall-container { flex: 1; width: 100%; padding: 2rem; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2rem; justify-content: center; min-height: 50vh; }
+        .sticky-note { width: 150px; height: 150px; padding: 1rem; display: flex; align-items: center; justify-content: center; text-align: center; font-family: 'Courier New', monospace; font-weight: 600; border-radius: 4px; transition: 0.3s ease; box-shadow: 5px 5px 0px rgba(0,0,0,0.5); cursor: pointer; }
+        .sticky-note:hover { z-index: 10; box-shadow: 10px 10px 0px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="/" class="nav-brand">Just Calm Vibes</a>
+        <div class="nav-links">
+            <a href="/wall/" class="nav-link" style="color: var(--accent); border-color: var(--accent);">Wall 📝</a>
+            <a href="/gift/" class="nav-link">Gift 🎁</a>
+        </div>
+    </nav>
+
+    <div class="controls">
+        <div class="controls-header">Leave a Vibe</div>
+        <input type="text" id="note-text" placeholder="Write something... (max 20)" maxlength="20" autocomplete="off">
+        <div class="color-picker" id="colors">
+            <div class="color-btn active" style="background: #fef08a;" data-color="#fef08a"></div>
+            <div class="color-btn" style="background: #bae6fd;" data-color="#bae6fd"></div>
+            <div class="color-btn" style="background: #fbcfe8;" data-color="#fbcfe8"></div>
+            <div class="color-btn" style="background: #bbf7d0;" data-color="#bbf7d0"></div>
+        </div>
+        <button class="submit-btn" id="btn-add">Stick to Wall</button>
+        <div id="status-msg" style="text-align: center; font-size: 0.8rem; color: #ef4444;"></div>
+    </div>
+
+    <div class="wall-container" id="wall"></div>
+
+    <script>
+        const supabase = supabase.createClient('https://arkvkruqvmytotywpefp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFya3ZrcnVxdm15dG90eXdwZWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTk0MTAwNzEsImV4cCI6MTczNDk2MzI3MX0.i1O_CKjrXtfklh1qcbCwvlYsb5zUWHFsGVzE0D2fV3I');
+        const wall = document.getElementById('wall');
+        const textInput = document.getElementById('note-text');
+        const btnAdd = document.getElementById('btn-add');
+        const statusMsg = document.getElementById('status-msg');
+        let selectedColor = '#fef08a';
+        
+        // Device Fingerprint (No Cookies)
+        const deviceId = btoa(navigator.userAgent + screen.width + screen.height);
+        const today = new Date().toISOString().split('T')[0];
+
+        // Color Picker Logic
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                selectedColor = e.target.getAttribute('data-color');
+            });
+        });
+
+        // Load Notes
+        async function fetchNotes() {
+            const { data, error } = await supabase.from('notes').select('*').order('id', { ascending: false });
+            if (data) {
+                wall.innerHTML = '';
+                data.forEach(note => {
+                    const el = document.createElement('div');
+                    el.className = 'sticky-note';
+                    el.style.backgroundColor = note.color;
+                    el.style.transform = `rotate(${note.rotation}deg)`;
+                    el.innerText = note.text;
+                    wall.appendChild(el);
+                });
+            }
+        }
+
+        // Add Note
+        btnAdd.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) return;
+            
+            btnAdd.disabled = true;
+            statusMsg.innerText = "Checking...";
+
+            // Check 1-per-day limit
+            const { data: existing } = await supabase.from('notes')
+                .select('*').eq('device_id', deviceId).eq('created_at', today);
+            
+            if (existing && existing.length > 0) {
+                statusMsg.innerText = "Limit reached: 1 note per day per device.";
+                btnAdd.disabled = false;
+                return;
+            }
+
+            // Insert
+            const { error } = await supabase.from('notes').insert([{
+                text: text, color: selectedColor, rotation: (Math.random() * 30) - 15,
+                device_id: deviceId, created_at: today
+            }]);
+
+            if (error) {
+                statusMsg.innerText = "Error saving note.";
+            } else {
+                textInput.value = '';
+                statusMsg.innerText = "Added successfully!";
+                statusMsg.style.color = "#22c55e";
+                fetchNotes();
+            }
+            btnAdd.disabled = false;
+        });
+
+        fetchNotes();
+    </script>
+</body>
+</html>
