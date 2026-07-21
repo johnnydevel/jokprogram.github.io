@@ -3,146 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Just Calm Vibes</title>
+    <title>Community Wall | Just Calm Vibes</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --bg-dark: #070709; --text-main: #ffffff; --warn-yellow: #eab308;
-            --glass-bg: rgba(15, 15, 20, 0.4); --glass-border: rgba(255, 255, 255, 0.08);
+            --bg-dark: #070709; --text-main: #ffffff; --accent: #eab308;
+            --glass-bg: rgba(20, 20, 25, 0.9); --glass-border: rgba(255, 255, 255, 0.1);
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background-color: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 100vh; overflow: hidden; position: relative;
-        }
-
+        body { background-color: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+        
         /* Navbar */
-        .nav-bar {
-            position: fixed; top: 0; left: 0; width: 100%; padding: 1.5rem 2rem;
-            display: flex; justify-content: space-between; align-items: center; z-index: 100;
-        }
+        .nav-bar { position: fixed; top: 0; left: 0; width: 100%; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; z-index: 100; background: rgba(7,7,9,0.95); border-bottom: 1px solid var(--glass-border); }
         .nav-brand { color: #fff; font-weight: 900; text-decoration: none; font-size: 1.2rem; }
         .nav-links { display: flex; gap: 1rem; }
-        .nav-link {
-            color: #fff; text-decoration: none; font-weight: 700; padding: 0.5rem 1rem; border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); transition: all 0.3s ease;
-        }
-        .nav-link:hover { background: rgba(234, 179, 8, 0.2); color: var(--warn-yellow); border-color: var(--warn-yellow); transform: translateY(-2px); }
+        .nav-link { color: #fff; text-decoration: none; font-weight: 700; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); transition: all 0.3s ease; }
+        .nav-link:hover { color: var(--accent); border-color: var(--accent); }
 
-        /* Background Animated Ducky */
-        .duck-container {
-            position: fixed; top: 50%; left: 50%; width: 85vmin; max-width: 600px;
-            transform: translate(-50%, -50%); z-index: -1; opacity: 0.08;
-            pointer-events: none; animation: float 10s ease-in-out infinite;
-        }
-        .pixel-duck { width: 100%; height: auto; image-rendering: pixelated; filter: drop-shadow(0 0 30px rgba(234, 179, 8, 0.5)); }
-        @keyframes float {
-            0%, 100% { transform: translate(-50%, -50%) rotate(-2deg) scale(1); }
-            50% { transform: translate(-50%, -55%) rotate(2deg) scale(1.02); }
-        }
-
-        /* Weather Effects */
-        #weather-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 0; }
-        .weather-drop { position: absolute; top: -10vh; background: rgba(255, 255, 255, 0.3); }
-        .rain { width: 2px; height: 25px; animation: fall-rain linear infinite; }
-        .snow { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.8); animation: fall-snow linear infinite; }
+        /* Controls */
+        .controls { margin: 7rem auto 2rem; padding: 1.5rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; width: 90%; max-width: 500px; display: flex; flex-direction: column; gap: 1rem; z-index: 50; }
+        .controls-header { font-weight: 800; font-size: 1.2rem; text-align: center; }
+        input[type="text"] { width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.5); color: #fff; font-size: 1rem; }
+        input[type="text"]:focus { outline: none; border-color: var(--accent); }
         
-        @keyframes fall-rain { to { transform: translateY(120vh); } }
-        @keyframes fall-snow { to { transform: translateY(120vh) translateX(20px); } }
+        .color-picker { display: flex; gap: 0.5rem; justify-content: center; }
+        .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
+        .color-btn.active { border-color: #fff; transform: scale(1.2); }
+        button.submit-btn { padding: 1rem; border: none; border-radius: 8px; background: var(--accent); color: #000; font-weight: 800; cursor: pointer; transition: 0.2s ease; }
+        button.submit-btn:hover { background: #facc15; }
+        button.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Main Content */
-        .content-wrapper { position: relative; z-index: 10; text-align: center; padding: 2rem; width: 100%; }
-        h1 {
-            font-size: clamp(3rem, 10vw, 6rem); font-weight: 900; letter-spacing: -0.04em;
-            background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 2.5rem;
-        }
-
-        /* Footer */
-        .footer { position: absolute; bottom: 2rem; display: flex; gap: 2rem; z-index: 10; }
-        .footer a { color: #52525b; text-decoration: none; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; transition: 0.3s ease; }
-        .footer a:hover { color: #ffffff; transform: translateY(-2px); }
+        /* Expanding Korok Board */
+        .wall-container { flex: 1; width: 100%; padding: 2rem; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2rem; justify-content: center; min-height: 50vh; }
+        .sticky-note { width: 150px; height: 150px; padding: 1rem; display: flex; align-items: center; justify-content: center; text-align: center; font-family: 'Courier New', monospace; font-weight: 700; font-size: 1.1rem; color: #000; word-break: break-word; border: 3px solid #000; box-shadow: 6px 6px 0px rgba(0,0,0,0.8); image-rendering: pixelated; transition: transform 0.3s ease; }
+        .sticky-note:hover { z-index: 10; box-shadow: 10px 10px 0px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
     <nav class="nav-bar">
         <a href="/" class="nav-brand">Just Calm Vibes</a>
         <div class="nav-links">
-            <a href="/wall/" class="nav-link">Wall 📝</a>
+            <a href="/wall/" class="nav-link" style="color: var(--accent); border-color: var(--accent);">Wall 📝</a>
             <a href="/gift/" class="nav-link">Gift 🎁</a>
         </div>
     </nav>
 
-    <div id="weather-container"></div>
-
-    <div class="duck-container">
-        <svg class="pixel-duck" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12">
-            <rect x="4" y="2" width="4" height="3" fill="#eab308"/>
-            <rect x="2" y="5" width="8" height="4" fill="#eab308"/>
-            <rect x="1" y="6" width="1" height="2" fill="#eab308"/>
-            <rect x="10" y="6" width="1" height="2" fill="#eab308"/>
-            <rect x="8" y="3" width="3" height="1" fill="#f97316"/>
-            <rect x="6" y="3" width="1" height="1" fill="#070709"/>
-            <rect x="4" y="2" width="1" height="1" fill="#fef08a"/>
-            <rect x="2" y="5" width="1" height="1" fill="#fef08a"/>
-        </svg>
+    <div class="controls">
+        <div class="controls-header">Leave a Vibe</div>
+        <input type="text" id="note-text" placeholder="Write something... (max 20)" maxlength="20" autocomplete="off">
+        <div class="color-picker" id="colors">
+            <div class="color-btn active" style="background: #fef08a;" data-color="#fef08a"></div>
+            <div class="color-btn" style="background: #bae6fd;" data-color="#bae6fd"></div>
+            <div class="color-btn" style="background: #fbcfe8;" data-color="#fbcfe8"></div>
+            <div class="color-btn" style="background: #bbf7d0;" data-color="#bbf7d0"></div>
+        </div>
+        <button class="submit-btn" id="btn-add">Stick to Wall</button>
+        <div id="status-msg" style="text-align: center; font-size: 0.8rem; color: #ef4444;"></div>
     </div>
 
-    <div class="content-wrapper">
-        <h1>Just calm vibes.</h1>
-    </div>
-
-    <div class="footer">
-        <a href="/privacy-policy.html">Privacy Policy</a>
-        <a href="/tos.html">Terms of Service</a>
-    </div>
+    <div class="wall-container" id="wall"></div>
 
     <script>
-        // Weather Logic
-        async function initWeather() {
-            try {
-                // Ask user for location
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        const supabase = supabase.createClient('https://arkvkruqvmytotywpefp.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFya3ZrcnVxdm15dG90eXdwZWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMjAwNjMsImV4cCI6MjA5OTg5NjA2M30.JWqwM6q74TPeDoUE9AaUsYDGaaYcW2twowOHKfxfnVA');
+        const wall = document.getElementById('wall');
+        const textInput = document.getElementById('note-text');
+        const btnAdd = document.getElementById('btn-add');
+        const statusMsg = document.getElementById('status-msg');
+        let selectedColor = '#fef08a';
+        
+        // Device Fingerprint (No Cookies)
+        const deviceId = btoa(navigator.userAgent + screen.width + screen.height);
+        const today = new Date().toISOString().split('T')[0];
+
+        // Color Picker Logic
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                selectedColor = e.target.getAttribute('data-color');
+            });
+        });
+
+        // Load Notes
+        async function fetchNotes() {
+            const { data, error } = await supabase.from('notes').select('*').order('id', { ascending: false });
+            if (data) {
+                wall.innerHTML = '';
+                data.forEach(note => {
+                    const el = document.createElement('div');
+                    el.className = 'sticky-note';
+                    el.style.backgroundColor = note.color;
+                    el.style.transform = `rotate(${note.rotation}deg)`;
+                    el.innerText = note.text;
+                    wall.appendChild(el);
                 });
-                
-                const { latitude, longitude } = pos.coords;
-                // Replace with your actual OpenWeatherMap API Key
-                const apiKey = "YOUR_OPENWEATHER_API_KEY"; 
-                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}`);
-                
-                if (!res.ok) return; // Fail silently if API errors
-                
-                const data = await res.json();
-                const condition = data.weather[0].main.toLowerCase();
-                
-                if (condition.includes('rain')) startWeatherEffect('rain');
-                if (condition.includes('snow')) startWeatherEffect('snow');
-                
-            } catch (error) {
-                console.log("Weather effect skipped (location denied or unavailable).");
             }
         }
 
-        function startWeatherEffect(type) {
-            const container = document.getElementById('weather-container');
-            const dropCount = type === 'rain' ? 80 : 50;
+        // Add Note
+        btnAdd.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) return;
             
-            for (let i = 0; i < dropCount; i++) {
-                const drop = document.createElement('div');
-                drop.classList.add('weather-drop', type);
-                drop.style.left = `${Math.random() * 100}vw`;
-                drop.style.animationDuration = `${Math.random() * 1.5 + 0.5}s`;
-                drop.style.animationDelay = `${Math.random() * 2}s`;
-                drop.style.opacity = Math.random() * 0.5 + 0.3;
-                container.appendChild(drop);
-            }
-        }
+            btnAdd.disabled = true;
+            statusMsg.innerText = "Checking...";
 
-        initWeather();
+            // Check 1-per-day limit
+            const { data: existing } = await supabase.from('notes')
+                .select('*').eq('device_id', deviceId).eq('created_at', today);
+            
+            if (existing && existing.length > 0) {
+                statusMsg.innerText = "Limit reached: 1 note per day per device.";
+                btnAdd.disabled = false;
+                return;
+            }
+
+            // Insert
+            const { error } = await supabase.from('notes').insert([{
+                text: text, color: selectedColor, rotation: (Math.random() * 30) - 15,
+                device_id: deviceId, created_at: today
+            }]);
+
+            if (error) {
+                statusMsg.innerText = "Error saving note.";
+            } else {
+                textInput.value = '';
+                statusMsg.innerText = "Added successfully!";
+                statusMsg.style.color = "#22c55e";
+                fetchNotes();
+            }
+            btnAdd.disabled = false;
+        });
+
+        fetchNotes();
     </script>
 </body>
 </html>
